@@ -10,6 +10,21 @@ class PasswordManagerScreen extends StatefulWidget {
 
 class _PasswordManagerScreenState extends State<PasswordManagerScreen> {
   int _expandedIndex = -1;
+  User? trenutniKorisnik;
+  String? korisnikId;
+
+  void _dohvatiTrenutnogKorisnika() async {
+    trenutniKorisnik = FirebaseAuth.instance.currentUser;
+    korisnikId = trenutniKorisnik?.uid;
+
+    setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _dohvatiTrenutnogKorisnika();
+  }
 
   void _urediLozinku(DocumentSnapshot lozinkaData) {
     final _lozinkaController = TextEditingController(text: lozinkaData['lozinka']);
@@ -65,8 +80,35 @@ class _PasswordManagerScreenState extends State<PasswordManagerScreen> {
   }
 
   void _obrisiLozinku(DocumentSnapshot lozinkaData) {
-    FirebaseFirestore.instance.collection('lozinke').doc(lozinkaData.id).delete();
+    try {
+      FirebaseFirestore.instance
+          .collection('korisnici')
+          .doc(korisnikId)
+          .collection('lozinke')
+          .doc(lozinkaData.id) // Koristi ID iz DocumentSnapshot-a
+          .delete()
+          .then((_) {
+        print('Lozinka uspešno obrisana');
+      })
+          .catchError((error) {
+        // Obrada greške
+        print('Došlo je do greške: $error');
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Došlo je do greške prilikom brisanja lozinke!')
+            )
+        );
+      });
+    } catch (e) {
+      print(e);
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Došlo je do greške prilikom brisanja lozinke!')
+          )
+      );
+    }
   }
+
 
   void _kopirajNaKlipbord(String lozinka) {
     Clipboard.setData(ClipboardData(text: lozinka));
